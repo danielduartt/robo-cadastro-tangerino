@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 from dotenv import load_dotenv
 
 # Adiciona o diretório raiz do projeto ao path para encontrar a pasta 'src'
@@ -18,23 +19,23 @@ from src.cadastro.cadastro import navegar_para_colaboradores, executar_cadastros
 
 # --- CONFIGURAÇÕES DO TESTE ---
 URL_LOGIN = "https://app.tangerino.com.br/Tangerino/pages/LoginPage"
-CAMINHO_PLANILHA = "data/colaborador_unico.xlsx" 
+CAMINHO_PLANILHA = "data/colaborador_unico.xlsx" # Planilha com dados de apenas um colaborador
 
-def testar_cadastro_unico():
+def testar_simulacao_unica():
     """
-    Script que testa o cadastro de um único colaborador do início ao fim.
+    Script que testa o preenchimento do formulário para um único colaborador,
+    sem salvar, permitindo verificação visual.
     """
-    print("--- INICIANDO TESTE DE CADASTRO ÚNICO ---")
+    print("--- INICIANDO TESTE DE SIMULAÇÃO DE CADASTRO ÚNICO ---")
     
     load_dotenv()
     
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    # A linha '--headless' foi removida para que o navegador seja visível durante o teste.
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--start-maximized") # Inicia o navegador maximizado
     
-    # Aumenta o tempo de espera geral para 30 segundos
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
     wait = WebDriverWait(driver, 30)
 
@@ -49,29 +50,32 @@ def testar_cadastro_unico():
         # Etapa 1: Login
         driver.get(URL_LOGIN)
         if not realizar_login(driver, wait, meu_usuario, minha_senha):
-            print("\n❌ FALHA NO TESTE: O login falhou.")
+            print("\n❌ FALHA NA SIMULAÇÃO: O login falhou.")
             return
 
         # Etapa 2: Navegar para Colaboradores
         if not navegar_para_colaboradores(driver, wait):
-            print("\n❌ FALHA NO TESTE: A navegação para colaboradores falhou.")
+            print("\n❌ FALHA NA SIMULAÇÃO: A navegação para colaboradores falhou.")
             return
 
-        # Etapa 3: Executar o cadastro a partir da planilha (em modo real)
-        # Omitir o modo_teste ou passá-lo como False executará o salvamento.
-        if executar_cadastros_planilha(driver, wait, CAMINHO_PLANILHA):
-            print("\n✅ TESTE BEM-SUCEDIDO: Processo de cadastro finalizado.")
+        # Etapa 3: Executar o preenchimento a partir da planilha (em modo de teste)
+        # Passar modo_teste=True garante que o robô NÃO clicará em "Salvar".
+        if executar_cadastros_planilha(driver, wait, CAMINHO_PLANILHA, modo_teste=True):
+            print("\n✅ SIMULAÇÃO BEM-SUCEDIDA: Formulário preenchido para verificação.")
+            print("   O navegador ficará aberto por 30 segundos.")
+            time.sleep(30) # Pausa para verificação visual
         else:
-            print("\n❌ FALHA NO TESTE: Ocorreram erros durante o processo de cadastro.")
+            print("\n❌ FALHA NA SIMULAÇÃO: Ocorreram erros durante o preenchimento.")
 
     except Exception as e:
         print(f"\n❌ ERRO FATAL NO SCRIPT DE TESTE: {e}")
-        driver.get_screenshot_as_file("erro_fatal_cadastro_unico.png")
-        print("   Screenshot 'erro_fatal_cadastro_unico.png' salvo.")
+        driver.get_screenshot_as_file("erro_fatal_simulacao_unica.png")
+        print("   Screenshot 'erro_fatal_simulacao_unica.png' salvo.")
 
     finally:
         driver.quit()
         print("--- TESTE FINALIZADO ---")
 
 if __name__ == "__main__":
-    testar_cadastro_unico()
+    testar_simulacao_unica()
+
