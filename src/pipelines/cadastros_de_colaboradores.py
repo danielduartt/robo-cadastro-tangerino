@@ -13,8 +13,8 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Importa as NOSSAS funções dos outros arquivos
-from login.login import realizar_login
-from cadastro.cadastro import cadastrar_colaboradores
+from login import realizar_login
+from cadastro import cadastrar_colaboradores
 
 # --- CONFIGURAÇÕES GLOBAIS ---
 URL_LOGIN = "https://app.tangerino.com.br/Tangerino/pages/LoginPage/" # <-- MUDE AQUI
