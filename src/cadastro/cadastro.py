@@ -10,7 +10,7 @@ def navegar_para_colaboradores(driver, wait):
     """
     try:
         print("-> Módulo de Cadastro: Iniciando navegação para 'Colaboradores'.")
-        # É preciso garantir que o foco está na página principal para clicar nos menus
+        # Garante que o foco está na página principal para clicar nos menus
         driver.switch_to.default_content()
         
         menu_principal_xpath = "//a[.//span[contains(text(), 'Cadastros gerais')]]"
@@ -21,19 +21,18 @@ def navegar_para_colaboradores(driver, wait):
         wait.until(EC.element_to_be_clickable((By.XPATH, submenu_colaboradores_xpath))).click()
         print("   Clicado em 'Colaboradores'.")
 
-        # Após clicar, o conteúdo da lista é carregado dentro do <embed>
-        # Vamos mudar o foco para dentro do <embed> para encontrar o botão
-        print("   Aguardando o painel de colaboradores carregar...")
-        embed_element = wait.until(EC.presence_of_element_located((By.TAG_NAME, "embed")))
-        driver.switch_to.frame(embed_element)
+        # Usa um método robusto que espera o painel (<embed>) estar pronto
+        # e já muda o foco para dentro dele em uma única etapa.
+        print("   Aguardando o painel de colaboradores carregar e mudando o foco...")
+        wait.until(EC.frame_to_be_available_and_switch_to_it((By.TAG_NAME, "embed")))
         
+        # Agora que estamos DENTRO do painel, esperamos pelo botão 'Cadastrar'.
         wait.until(EC.presence_of_element_located((By.ID, "editPageLink")))
         print("   Página de colaboradores encontrada com sucesso (dentro do painel).")
         return True
     except Exception as e:
         print(f"❌ ERRO ao navegar para a página de colaboradores: {e}")
         driver.get_screenshot_as_file("debug_falha_navegacao.png")
-        # Garante que o foco volte ao padrão em caso de erro
         try:
             driver.switch_to.default_content()
         except:
@@ -46,12 +45,11 @@ def iniciar_novo_cadastro(driver, wait):
     """
     try:
         print("-> Módulo de Cadastro: Clicando no botão para iniciar novo cadastro.")
-        # O driver já deve estar focado no painel/embed por causa da função anterior
+        # O driver já deve estar focado no painel/embed.
         wait.until(EC.element_to_be_clickable((By.ID, "editPageLink"))).click()
         
-        # Confirma que o formulário foi aberto verificando o campo "Nome"
-        # O formulário abre dentro do mesmo painel/embed
-        wait.until(EC.presence_of_element_located((By.NAME, "nome")))
+        # Confirma que o formulário foi aberto verificando um elemento único dele, como o botão Salvar.
+        wait.until(EC.presence_of_element_located((By.NAME, "container:salvar")))
         print("   Formulário de cadastro aberto com sucesso.")
         return True
     except Exception as e:
@@ -105,10 +103,8 @@ def executar_cadastros_planilha(driver, wait, caminho_arquivo_dados, modo_teste=
             print(f"\n--- Iniciando {'simulação de' if modo_teste else ''} cadastro de: {nome} ---")
             
             # Etapa 1: Abrir o formulário de cadastro.
-            # A função navegar_para_colaboradores já deixou o foco dentro do painel.
             if not iniciar_novo_cadastro(driver, wait):
                 print(f"   ❌ ERRO: Não foi possível abrir o formulário para {nome}. Interrompendo.")
-                # Antes de sair, retorna o foco para a página principal
                 driver.switch_to.default_content()
                 return False
 
@@ -116,8 +112,7 @@ def executar_cadastros_planilha(driver, wait, caminho_arquivo_dados, modo_teste=
             if not preencher_formulario_colaborador(driver, wait, linha):
                 # Tenta voltar para a lista para continuar com o próximo colaborador
                 try:
-                    # O botão Voltar está dentro do mesmo painel/embed
-                    driver.find_element(By.ID, "id2da").click()
+                    driver.find_element(By.NAME, "container:voltar").click() # Botão Voltar
                     wait.until(EC.presence_of_element_located((By.ID, "editPageLink")))
                 except:
                     print("   Não foi possível retornar à página de listagem. Interrompendo.")
@@ -127,21 +122,17 @@ def executar_cadastros_planilha(driver, wait, caminho_arquivo_dados, modo_teste=
 
             # Etapa 3: Salvar (ou não, se for teste)
             if not modo_teste:
-                driver.find_element(By.ID, "id2d8").click() # Botão Salvar
+                driver.find_element(By.NAME, "container:salvar").click() # Botão Salvar
                 print("   Botão 'Salvar' clicado.")
                 
-                # A mensagem de sucesso aparece dentro do mesmo painel/embed
                 wait.until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Operação realizada com sucesso')]")))
                 print(f"   ✅ SUCESSO: {nome} cadastrado!")
 
-                # Após salvar, o sistema geralmente volta para a lista automaticamente.
-                # Vamos esperar o botão 'Cadastrar' da lista aparecer novamente.
                 wait.until(EC.presence_of_element_located((By.ID, "editPageLink")))
                 print("   Retorno para a lista de colaboradores confirmado.")
             else:
                 print("   Simulação concluída. O botão 'Salvar' NÃO foi clicado.")
                 # Em modo de teste, paramos após o primeiro para permitir a verificação.
-                # Retornamos o foco para a página principal antes de sair.
                 driver.switch_to.default_content()
                 return True
                 
@@ -155,7 +146,6 @@ def executar_cadastros_planilha(driver, wait, caminho_arquivo_dados, modo_teste=
     except Exception as e:
         print(f"❌ ERRO FATAL no processo de cadastro em lote: {e}")
         driver.get_screenshot_as_file("debug_erro_fatal_cadastro.png")
-        # Garante que o foco volte ao padrão em caso de erro
         try:
             driver.switch_to.default_content()
         except:
